@@ -1,4 +1,4 @@
-<img width="1920" height="1080" alt="Screenshot (360)" src="https://github.com/user-attachments/assets/00c58053-3e9c-4976-8009-643557971b86" /># 🌤️ Dynamic Weather Dashboard
+<img width="1920" height="1080" alt="Screenshot (360)" src="https://github.com/user-attachments/assets/00c58053-3e9c-4976-8009-643557971b86" /># 🌤️ Weatherly:
 
 A simple and attractive **Weather Dashboard** built with **HTML, CSS, and JavaScript**.  
 This app provides **real-time weather information** such as temperature, humidity, wind speed, and conditions for any city in the world.  
