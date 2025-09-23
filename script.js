@@ -1,121 +1,53 @@
-const apiKey = "637e619566e6dd275f2ada8670356e02"; 
-const searchBtn = document.getElementById("searchBtn");
-const cityInput = document.getElementById("cityInput");
-const suggestions = document.getElementById("suggestions");
+const key = '637e619566e6dd275f2ada8670356e02';
+const params = new URLSearchParams(location.search);
+const city = params.get('city');
 
-// Elements
-const cityName = document.getElementById("cityName");
-const temperature = document.getElementById("temperature");
-const condition = document.getElementById("condition");
-const humidity = document.getElementById("humidity");
-const wind = document.getElementById("wind");
-const weatherIcon = document.getElementById("weatherIcon");
+if (!city) location.href = 'index.html';
 
-// Fetch weather by city name
-async function getWeather(city) {
-  const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`;
-  const response = await fetch(url);
-  const data = await response.json();
+const themeToggle = document.getElementById('themeToggle');
+themeToggle.addEventListener('click', () => document.body.classList.toggle('dark'));
 
-  if (data.cod === "404") {
-    cityName.textContent = "City Not Found";
-    temperature.textContent = "--°C";
-    condition.textContent = "--";
-    humidity.textContent = "--%";
-    wind.textContent = "-- km/h";
-    weatherIcon.src = "";
+async function getWeather() {
+  const [current, forecast] = await Promise.all([
+    fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${key}&units=metric`).then(r => r.json()),
+    fetch(`https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${key}&units=metric`).then(r => r.json())
+  ]);
+
+  if (current.cod === '404') {
+    document.getElementById('cityName').textContent = 'City not found';
     return;
   }
 
-  cityName.textContent = data.name;
-  temperature.textContent = `${Math.round(data.main.temp)}°C`;
-  condition.textContent = data.weather[0].description;
-  humidity.textContent = `${data.main.humidity}%`;
-  wind.textContent = `${data.wind.speed} km/h`;
-  weatherIcon.src = `https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`;
+  // current
+  document.getElementById('cityName').textContent = `${current.name}, ${current.sys.country}`;
+  document.getElementById('temperature').textContent = `${Math.round(current.main.temp)}°C`;
+  document.getElementById('condition').textContent = current.weather[0].description;
+  document.getElementById('humidity').textContent = `${current.main.humidity}%`;
+  document.getElementById('wind').textContent = `${current.wind.speed} km/h`;
+  document.getElementById('weatherIcon').src = `https://openweathermap.org/img/wn/${current.weather[0].icon}@2x.png`;
+
+  // background
+  const main = current.weather[0].main.toLowerCase();
+  const gradients = {
+    clear: 'linear-gradient(135deg, #43cea2, #185a9d)',
+    clouds: 'linear-gradient(135deg, #bdc3c7, #2c3e50)',
+    rain: 'linear-gradient(135deg, #3a7bd5, #3a6073)',
+    snow: 'linear-gradient(135deg, #e6dada, #274046)',
+    thunderstorm: 'linear-gradient(135deg, #141e30, #243b55)',
+    drizzle: 'linear-gradient(135deg, #4b79a1, #283e51)',
+    mist: 'linear-gradient(135deg, #606c88, #3f4c6b)'
+  };
+  document.body.style.background = gradients[main] || gradients.clear;
+
+  // 5-day forecast
+  const list = forecast.list.filter((_, i) => i % 8 === 0).slice(0, 5);
+  document.getElementById('forecast').innerHTML = list.map(item => `
+    <div class="forecast-day">
+      <p>${new Date(item.dt * 1000).toLocaleDateString(undefined, { weekday: 'short' })}</p>
+      <img src="https://openweathermap.org/img/wn/${item.weather[0].icon}.png">
+      <p>${Math.round(item.main.temp)}°C</p>
+    </div>
+  `).join('');
 }
 
-// Autocomplete city suggestions
-async function getCitySuggestions(query) {
-  if (!query) {
-    suggestions.style.display = "none";
-    return;
-  }
-
-  const url = `https://api.openweathermap.org/geo/1.0/direct?q=${query}&limit=5&appid=${apiKey}`;
-  const response = await fetch(url);
-  const data = await response.json();
-
-  suggestions.innerHTML = "";
-  if (data.length === 0) {
-    suggestions.style.display = "none";
-    return;
-  }
-
-  data.forEach(city => {
-    const li = document.createElement("li");
-    li.textContent = `${city.name}, ${city.country}`;
-    li.addEventListener("click", () => {
-      cityInput.value = `${city.name}`;
-      suggestions.style.display = "none";
-      getWeather(city.name);
-    });
-    suggestions.appendChild(li);
-  });
-
-  suggestions.style.display = "block";
-}
-
-// Search button click
-searchBtn.addEventListener("click", () => {
-  const city = cityInput.value;
-  if (city) getWeather(city);
-});
-
-// Input typing → show suggestions
-cityInput.addEventListener("input", () => {
-  const query = cityInput.value;
-  getCitySuggestions(query);
-});
-
-// Press Enter to search
-cityInput.addEventListener("keypress", (e) => {
-  if (e.key === "Enter") {
-    const city = cityInput.value;
-    if (city) {
-      suggestions.style.display = "none";
-      getWeather(city);
-    }
-  }
-});
-
-// Hide suggestions when clicking outside
-document.addEventListener("click", (e) => {
-  if (!e.target.closest(".search-box")) {
-    suggestions.style.display = "none";
-  }
-});
-
-// Fetch weather by current location
-function getLocationWeather() {
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(async (position) => {
-      const lat = position.coords.latitude;
-      const lon = position.coords.longitude;
-
-      const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`;
-      const response = await fetch(url);
-      const data = await response.json();
-
-      cityName.textContent = data.name;
-      temperature.textContent = `${Math.round(data.main.temp)}°C`;
-      condition.textContent = data.weather[0].description;
-      humidity.textContent = `${data.main.humidity}%`;
-      wind.textContent = `${data.wind.speed} km/h`;
-      weatherIcon.src = `https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`;
-    });
-  }
-}
-
-// Load current location weather on page load
-window.onload = getLocationWeather;
+getWeather();
