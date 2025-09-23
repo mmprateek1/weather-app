@@ -3,31 +3,83 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Weather Dashboard</title>
+  <title>Weatherly – Search</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
-  <h1 class="main-title">Weatherly</h1>
-  <div class="weather-container">
+<body class="center">
+  <div class="card">
+    <h1>Weatherly</h1>
+    <p>Enter a city to see the forecast</p>
+
     <div class="search-box">
-      <input type="text" id="cityInput" placeholder="Search city...">
+      <input
+        id="cityInput"
+        type="text"
+        placeholder="Start typing a city…"
+        autocomplete="off"
+      >
       <button id="searchBtn">🔍</button>
       <ul id="suggestions"></ul>
     </div>
-
-    <div class="weather-info">
-      <img id="weatherIcon" src="" alt="Weather Icon">
-      <h1 id="temperature">--°C</h1>
-      <h2 id="cityName">Loading...</h2>
-      <p id="condition">--</p>
-    </div>
-
-    <div class="extra-info">
-      <p>💧 Humidity: <span id="humidity">--%</span></p>
-      <p>🌬 Wind: <span id="wind">-- km/h</span></p>
-    </div>
   </div>
 
-  <script src="script.js"></script>
+  <script>
+    const key = '637e619566e6dd275f2ada8670356e02'; // OpenWeatherMap key
+    const input = document.getElementById('cityInput');
+    const suggestions = document.getElementById('suggestions');
+    const searchBtn = document.getElementById('searchBtn');
+
+    /* ---------- debounce ---------- */
+    function debounce(fn, delay = 300) {
+      let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), delay); };
+    }
+
+    /* ---------- fetch cities ---------- */
+    async function fetchCities(q) {
+      if (!q) { suggestions.innerHTML = ''; suggestions.style.display = 'none'; return; }
+      const res = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${q}&limit=5&appid=${key}`);
+      const data = await res.json();
+      renderSuggestions(data);
+    }
+
+    /* ---------- render dropdown ---------- */
+    function renderSuggestions(list) {
+      suggestions.innerHTML = '';
+      if (!list.length) { suggestions.style.display = 'none'; return; }
+      list.forEach(c => {
+        const li = document.createElement('li');
+        li.textContent = `${c.name}, ${c.country}`;
+        li.addEventListener('click', () => selectCity(c.name));
+        suggestions.appendChild(li);
+      });
+      suggestions.style.display = 'block';
+    }
+
+    /* ---------- city selected ---------- */
+    function selectCity(city) {
+      input.value = city;
+      suggestions.innerHTML = '';
+      suggestions.style.display = 'none';
+      goToWeather(city);
+    }
+
+    /* ---------- navigation ---------- */
+    function goToWeather(city) {
+      if (!city.trim()) return;
+      location.href = `weather.html?city=${encodeURIComponent(city)}`;
+    }
+
+    /* ---------- events ---------- */
+    input.addEventListener('input', debounce(e => fetchCities(e.target.value.trim())));
+    searchBtn.addEventListener('click', () => goToWeather(input.value.trim()));
+    input.addEventListener('keypress', e => { if (e.key === 'Enter') goToWeather(input.value.trim()); });
+
+    /* ---------- hide on outside click ---------- */
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.search-box')) {
+        suggestions.style.display = 'none';
+      }
+    });
+  </script>
 </body>
 </html>
